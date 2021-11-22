@@ -624,18 +624,49 @@
 
          //supp
          FD_CLR(sockfd,&master);
+         
+         memset(&s_init, 0, sizeof(s_init));
+   	s_init.ai_family = AF_INET;
+   	s_init.ai_socktype = SOCK_STREAM;
+  	//attendre que l'on se connecte à nous et maintenir la connexion ouverte pour 
 
-           //creer la socket de service du client
-         //ajouter la nouvelle socket dans master
+   	if (getaddrinfo(addr_j2,port_j2, &s_init, &servinfo) != 0) {
+    	  //fprintf(stdout, "%s\n", );
+    	  fprintf(stderr, "Erreur getaddrinfo\n");
+    	  exit(1);
+  	}
+
+         //creer la socket de service du client
+         if((newsockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+          perror("client: socket");
+        }
+
+        if((connect(newsockfd, p->ai_addr, p->ai_addrlen)) == -1) {
+          close(newsockfd);
+          perror("client: connect");
+        }
+
+
+        //ajouter la nouvelle socket dans master
+        FD_SET(newsockfd,&master);
+
          //tester si newsockfd > fdmax si oui alors fdmax = newsockfd
+        if(fd_signal>fdmax)
+        {
+          fdmax=fd_signal;
+        }
+
+        //choix couleur pour le cavalier: client -> noir
+        couleur = 0;
+
+        //initialisation du plateau 
+        init_interface_jeu();
+
+      }
 
 
 
-       }
-
-
-
-       if(i==sockfd)
+      if(i==sockfd)
         { // Acceptation connexion adversaire
 
            //partie serveur - socket d'écoute
@@ -643,7 +674,7 @@
 
 
           /***** TO DO *****/
-          s_taille = sizeof(their_addr);
+          int s_taille = sizeof(their_addr);
 
           //accept est bloquante, accept retourne une nouvelle socket et c'est cette socket
           //que l'on va utiliser pour communiquer avec le client
@@ -654,16 +685,26 @@
             continue;
           }
 
-          if(newsockfd>fdmax){
+          if( newsockfd > fdmax){
             fdmax = newsockfd;
           }
+
+          FD_SET(newsockfd,&master);
 
           //indiquer que le connexion est établie
           printf("Serveur: connexion d'un nouveau client\n");
 
+          //choix couleur pour le cavalier: server -> blanc
+          couleur = 1;
+
+          //initialisation du plateau 
+          init_interface_jeu();
+
           //initialiser les damiers (positions des pions)
 
           gtk_widget_set_sensitive((GtkWidget *) gtk_builder_get_object (p_builder, "button_start"), FALSE);
+
+
         }
 
 
