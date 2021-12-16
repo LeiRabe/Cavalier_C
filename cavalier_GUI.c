@@ -682,6 +682,8 @@ static void *f_com_socket(void *p_arg)
           }
 
           FD_SET(newsockfd, &master);
+          close(sockfd);
+          FD_CLR(sockfd,&master);
 
           //indiquer que le connexion est établie
           printf("Serveur: connexion d'un nouveau client\n");
@@ -693,7 +695,6 @@ static void *f_com_socket(void *p_arg)
           init_interface_jeu();
 
           //initialiser les damiers (positions des pions)
-
           gtk_widget_set_sensitive((GtkWidget *)gtk_builder_get_object(p_builder, "button_start"), FALSE);
         }
 
@@ -703,7 +704,7 @@ static void *f_com_socket(void *p_arg)
           /***** TO DO *****/
           //quelles sont les info qu'on va échanger?
           //envoie des données se fait dans coup joueur
-
+          printf("On ne fait rien encore");
           //gérer la couleur qui est sera blanc qui sera noir (pour le client serveur)
         }
       }
