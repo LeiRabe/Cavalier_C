@@ -268,9 +268,8 @@ static void coup_joueur(GtkWidget *p_case)
       //mise à jour du damier local
       damier[colCavalier][ligCavalier] = 3; //ajout d'un nouveau pion
 
-      //vérifier l'etat du jeu
-
       //A FAIRE
+      //vérifier l'etat du jeu
       //envoi des données
     }
   }
