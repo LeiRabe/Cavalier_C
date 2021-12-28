@@ -13,7 +13,6 @@
 
 #include <signal.h>
 #include <sys/signalfd.h>
-
 #include <gtk/gtk.h>
 
 #define MAXDATASIZE 256
@@ -231,6 +230,51 @@ static void coup_joueur(GtkWidget *p_case)
   // Traduction coordonnees damier en indexes matrice damier
   coord_to_indexes(gtk_buildable_get_name(GTK_BUILDABLE(gtk_bin_get_child(GTK_BIN(p_case)))), &col, &lig);
 
+  //récupération de la position initiale du cavalier
+  int colCavalier; //colonne
+  int ligCavalier; //ligne
+  
+  //parcours du damier local pour trouver le cavalier qui joue en fonction de sa couleur
+  for(int i=0; i<8; i++){
+    for(int j=0; j<8; j++){
+      if(damier[i][j]==couleur){
+        colCavalier = i;
+        ligCavalier = j;
+        break;
+      }
+    } 
+  }   
+    
+  if(damier[col][lig]<0){ //case vide
+
+    //vérification d'un coup valide
+    if( ((abs(colCavalier-col)==1) && (abs(ligCavalier-lig)==2)) || ((abs(colCavalier-col)==2) && (abs(ligCavalier-lig)==1)) ) {
+      
+      //placement d'un pion rouge à l'ancienne position du cavalier
+      affiche_pion(colCavalier,ligCavalier); 
+
+      //déplacement du cavalier à la nouvelle position
+      if(couleur==0){ //cavalier noir
+        affiche_cav_noir(col,lig); 
+        //mise à jour du damier local
+        damier[col][lig] = 0; // nouvelles coordonnées du cavalier
+      }
+      else { //cavalier blanc
+        affiche_cav_blanc(col,lig);
+        //mise à jour du damier local
+        damier[col][lig] = 1; // nouvelles coordonnées du cavalier
+      }
+
+      //mise à jour du damier local
+      damier[colCavalier][ligCavalier] = 3; //ajout d'un nouveau pion
+
+      //vérifier l'etat du jeu
+
+      //A FAIRE
+      //envoi des données
+    }
+  }
+  
   /***** TO DO *****/
   //ce qui ce passe lorsque l'on clique sur une des cases du damier: verif si coup vailde ou pas
   //pour réaliser un nouveau coup
@@ -501,6 +545,10 @@ void init_interface_jeu(void)
   affiche_cav_noir(0, 0);
 
   /***** TO DO *****/
+  //ajouter les cavaliers au damier 2D
+  //0 : pour noir, 1 : pour blanc
+  damier[0][0] = 0;
+  damier[7][7] = 1;
 }
 
 /* Fonction reinitialisant la liste des joueurs sur l'interface graphique */
@@ -595,7 +643,7 @@ static void *f_com_socket(void *p_arg)
         {
           /* Cas où de l'envoie du signal par l'interface graphique pour connexion au joueur adverse */
 
-          int rv; //je ne sais pas ce que c'est
+          int check_addr; //vérification de addrinfo
           //partie client
           /***** TO DO *****/
           //avant de faire le connect
@@ -614,12 +662,12 @@ static void *f_com_socket(void *p_arg)
 
           memset(&s_client, 0, sizeof(s_client));
           s_client.ai_family = AF_UNSPEC;
-          s_client.ai_socket = SOCK_STREAM;
-          rv = getaddrinfo(addr_j2, port_j2, &s_init, &servinfo);
+          s_client.ai_socktype = SOCK_STREAM;
+          check_addr = getaddrinfo(addr_j2, port_j2, &s_init, &servinfo);
 
-          if (rv != 0)
+          if (check_addr != 0)
           {
-            fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+            fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(check_addr));
             exit(1);
           }
 
@@ -655,6 +703,9 @@ static void *f_com_socket(void *p_arg)
 
           //initialisation du plateau
           init_interface_jeu();
+
+          //dégèle du plateau pour pouvoir jouer
+          degele_damier();
         }
 
         if (i == sockfd)
@@ -696,6 +747,9 @@ static void *f_com_socket(void *p_arg)
 
           //initialiser les damiers (positions des pions)
           gtk_widget_set_sensitive((GtkWidget *)gtk_builder_get_object(p_builder, "button_start"), FALSE);
+
+          //gèle du plateau pour donner la main à l'autre joueur
+          gele_damier();
         }
 
         else
@@ -738,7 +792,7 @@ int main(int argc, char **argv)
 
     if (p_err == NULL)
     {
-      /* Recuparation d'un pointeur sur la fenetre. */
+      /* Recupération d'un pointeur sur la fenetre. */
       GtkWidget *p_win = (GtkWidget *)gtk_builder_get_object(p_builder, "window1");
 
       /* Gestion evenement clic pour chacune des cases du damier */
