@@ -233,6 +233,15 @@ static void coup_joueur(GtkWidget *p_case)
   //récupération de la position initiale du cavalier
   int colCavalier; //colonne
   int ligCavalier; //ligne
+
+  //A FAIRE : réception de l'état de jeu de l'adversaire
+  //mise à jour du damier local
+  // ~/!\~ la première fois on ne reçoit rien
+  //si score = -1 ==> bloqué : est-ce qu'on peut jouer ?
+  //                           non ? égalité send état
+  //                           oui ? victoire send etat
+  //si score = 0 ==> rien : on peut jouer son tour
+  //A TRAVAILLER (bonus) : défaite du cavalier blanc car le cavalier noir est à l’abri derrière une barrière de pions rouge
   
   //parcours du damier local pour trouver le cavalier qui joue en fonction de sa couleur
   for(int i=0; i<8; i++){
@@ -242,10 +251,58 @@ static void coup_joueur(GtkWidget *p_case)
         ligCavalier = j;
         break;
       }
-    } 
-  }   
+    }
+  } 
+
+  //tableau de possibilités
+  int valeurs [8] = {-2,-2,-2,-2,-2,-2,-2,-2}; //initialisé pour savoir : -2 hors damier, -1 libre, 0 cavalier noir
+  int nb_chemin_possible = 0; //pour déterminer l'état du jeu, il faut savoir les mouvements possibles
+  score=0; // détermine l'état du jeu : -1 bloqué (plus de mouvements possibles), 0 neutre (partie en cours), 1 gagné
+
+  //vérification des coups possibles en excluant les cases qui ne sont pas dans le damier
+  if( (0<=colCavalier+1) && (colCavalier+1<8) && (0<=ligCavalier-2) && (ligCavalier-2<8) ){
+      valeurs[0] = damier[colCavalier+1][ligCavalier-2];
+  }
+  if( (0<=colCavalier-1) && (colCavalier-1<8) && (0<=ligCavalier-2) && (ligCavalier-2<8) ){
+    valeurs[1] = damier[colCavalier-1][ligCavalier-2];
+  }
+  if( (0<=colCavalier+1) && (colCavalier+1<8) && (0<=ligCavalier+2) && (ligCavalier+2<8) ){
+    valeurs[2] = damier[colCavalier+1][ligCavalier+2];
+  }
+  if( (0<=colCavalier-1) && (colCavalier-1<8) && (0<=ligCavalier+2) && (ligCavalier+2<8) ){
+    valeurs[3] = damier[colCavalier-1][ligCavalier+2];
+  }
+  if( (0<=colCavalier+2) && (colCavalier+2<8) && (0<=ligCavalier-1) && (ligCavalier-1<8) ){
+    valeurs[4] = damier[colCavalier+2][ligCavalier-1];
+  }
+  if( (0<=colCavalier-2) && (colCavalier-2<8) && (0<=ligCavalier-1) && (ligCavalier-1<8) ){
+    valeurs[5] = damier[colCavalier-2][ligCavalier-1];
+  }
+  if( (0<=colCavalier+2) && (colCavalier+2<8) && (0<=ligCavalier+1) && (ligCavalier+1<8) ){
+    valeurs[6] = damier[colCavalier+2][ligCavalier+1];
+  }
+  if( (0<=colCavalier-2) && (colCavalier-2<8) && (0<=ligCavalier+1) && (ligCavalier+1<8) ){
+    valeurs[7] = damier[colCavalier-2][ligCavalier+1];
+  }
+
+  //0 = noir, 1= blanc, 3 = pion
+
+  //vérification de l'état du jeu pour le cavalier qui joue
+  for (int i = 0; i < 8; i++){
+    //comptage du nombre de pions pour savoir si le cavalier est bloqué
+    if ( (valeurs[i] == -1))
+      nb_chemin_possible += 1;
     
-  if(damier[col][lig]<0){ //case vide
+    //vérification que le cavalier blanc peut atteindre le cavalier noir en un coup
+    else if ( (couleur == 1) && (valeurs[i] == 0) )
+      score = 1; //si oui, il a gagné la partie
+  }
+
+  //s'il n'y a pas de chemin possible, on est bloqué
+  if (nb_chemin_possible <= 0)
+    score = -1; //cavalier bloqué
+    
+  if( (score == 0) && (damier[col][lig]==-1)){ //partie en cours et case vide sélectionnée
 
     //vérification d'un coup valide
     if( ((abs(colCavalier-col)==1) && (abs(ligCavalier-lig)==2)) || ((abs(colCavalier-col)==2) && (abs(ligCavalier-lig)==1)) ) {
@@ -256,23 +313,23 @@ static void coup_joueur(GtkWidget *p_case)
       //déplacement du cavalier à la nouvelle position
       if(couleur==0){ //cavalier noir
         affiche_cav_noir(col,lig); 
-        //mise à jour du damier local
-        damier[col][lig] = 0; // nouvelles coordonnées du cavalier
       }
       else { //cavalier blanc
         affiche_cav_blanc(col,lig);
-        //mise à jour du damier local
-        damier[col][lig] = 1; // nouvelles coordonnées du cavalier
       }
 
-      //mise à jour du damier local
-      damier[colCavalier][ligCavalier] = 3; //ajout d'un nouveau pion
+      //mise à jour des nouvelles coordonnées du cavalier dans le damier local
+      damier[col][lig] = couleur;
 
-      //A FAIRE
-      //vérifier l'etat du jeu
-      //envoi des données
+      //mise à jour en ajoutant un nouveau pion dans le damier local
+      damier[colCavalier][ligCavalier] = 3;
+
+      
     }
   }
+  //A FAIRE
+  //envoi des données
+
   
   /***** TO DO *****/
   //ce qui ce passe lorsque l'on clique sur une des cases du damier: verif si coup vailde ou pas
