@@ -23,6 +23,8 @@ int couleur;      // 0 : pour noir, 1 : pour blanc, 3 : pour pion, 4 : pion avec
 
 int port; // numero port passé lors de l'appel
 
+int msg; //informations envoyées via la socket
+
 char *addr_j2, *port_j2; // Info sur adversaire
 
 pthread_t thr_id; // Id du thread fils gerant connexion socket
@@ -323,22 +325,21 @@ static void coup_joueur(GtkWidget *p_case)
 
       //mise à jour en ajoutant un nouveau pion dans le damier local
       damier[colCavalier][ligCavalier] = 3;
-
-      
     }
   }
   //A FAIRE
   //envoi des données
-
-  
-  /***** TO DO *****/
-  //ce qui ce passe lorsque l'on clique sur une des cases du damier: verif si coup vailde ou pas
-  //pour réaliser un nouveau coup
-  //col -> num col
-  //lig -> num ligne
-  //le damier: un tab 2d de 8x8
-  //tester dans damier si c'est un coup valide ou non, tant qu'il n'a pas cliquer sur une case valide on attend son coup
-
+  //allouer l'espace du buffer dans la mémoire
+  memset(&buf,0, sizeof(buf));
+  //définir les nouvelles coord du cavalier dans le buffer 
+  snprintf(buf,MAXDATASIZE,"%d,%d",htons((uint16_t)(int)&col),htons((uint16_t)(int)&lig));
+  size_t lenBuf = strlen(buf);
+ 
+  if(send(newsockfd, buf, lenBuf , 0) == -1) {
+      perror("send");
+  }
+  //après l'appel de coup joueur on gèle le damier
+  gele_damier();
   //Avant de passer la main au cavalier blanc: on va devoir fournir toutes les info du noir au blanc pour qu'il puisse comprendre les coups du joueur noir
   //comment mettre en place le tour par tour ? -> Comment passer la main au joueur adverse ? ->
   //1. envoyer un msg en mode: "c'est à ton tour"
@@ -596,7 +597,7 @@ void degele_damier(void)
 /* Fonction permettant d'initialiser le plateau de jeu */
 void init_interface_jeu(void)
 {
-  // Initilisation du damier (A1=cavalier_noir, H8=cavalier_blanc)
+  // Initialisation du damier (A1=cavalier_noir, H8=cavalier_blanc)
   affiche_cav_blanc(7, 7);
   affiche_cav_noir(0, 0);
 
@@ -708,7 +709,7 @@ static void *f_com_socket(void *p_arg)
           //connect
 
           //ferme la socket d'écoute dans le main
-          close(sockfd);
+         // close(sockfd);
 
           //supp
           FD_CLR(sockfd, &master);
@@ -759,9 +760,10 @@ static void *f_com_socket(void *p_arg)
 
           //initialisation du plateau
           init_interface_jeu();
-
+          printf("start jeu");
           //dégèle du plateau pour pouvoir jouer
           degele_damier();
+         
         }
 
         if (i == sockfd)
@@ -771,12 +773,13 @@ static void *f_com_socket(void *p_arg)
           //création de la socket d'écoute dans le main
 
           /***** TO DO *****/
-          int s_taille = sizeof(their_addr);
-
+          socklen_t s_taille = sizeof(their_addr);
+     
+       
           //accept est bloquante, accept retourne une nouvelle socket et c'est cette socket
           //que l'on va utiliser pour communiquer avec le client
           newsockfd = accept(sockfd, (struct sockaddr *)&their_addr, &s_taille);
-
+          
           if (newsockfd == -1)
           {
             perror("erreur lors du accept");
@@ -810,7 +813,10 @@ static void *f_com_socket(void *p_arg)
 
         else
         { // Reception et traitement des messages du joueur adverse
-
+         memset(buf,0,sizeof(buf));
+          //memset
+          recv(newsockfd, buf, sizeof(buf), 0);
+          degele_damier();
           /***** TO DO *****/
           //quelles sont les info qu'on va échanger?
           //envoie des données se fait dans coup joueur
